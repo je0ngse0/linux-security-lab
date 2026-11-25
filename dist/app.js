@@ -1,5 +1,4 @@
 const element = id => document.getElementById(id);
-const output = element('output');
 const setting = element('setting');
 const target = element('target');
 const selected = new Set();
@@ -10,20 +9,6 @@ const scenarios = groups.flatMap(([category, rows]) => rows.map(
 
 let server;
 let serverNumber = 0;
-
-function log(...entries) {
-  for (const [message, kind] of entries) {
-    const line = document.createElement('div');
-    line.textContent = message || '\u00a0';
-    line.className = kind || '';
-    output.append(line);
-  }
-  output.scrollTop = output.scrollHeight;
-}
-
-function prompt(action) {
-  return [`lab@${server.name}:~$ ${action}`, 'prompt'];
-}
 
 function updateSelection() {
   element('selection').textContent = `${selected.size}개 선택`;
@@ -78,32 +63,58 @@ function updateProgress() {
 }
 
 function openTarget() {
-  const { item, strong } = server.states.get(target.value);
+  const state = server.states.get(target.value);
+  const { item, strong } = state;
   element('category').textContent = item.category;
+  element('title').textContent = item.title;
   element('risk').textContent = item.risk;
   element('run').textContent = item.action;
   setting.replaceChildren(new Option(item.weak, 'weak'), new Option(item.strong, 'strong'));
   setting.value = strong ? 'strong' : 'weak';
+
+  const steps = [
+    `설정값을 「${item.weak}」로 두고 ‘${item.action}’을 실행하세요.`,
+    `조치 전 결과를 확인하세요. ${item.before}.`,
+    `「${item.strong}」로 바꾸고 같은 점검을 다시 실행하세요. 예상 결과는 ‘${item.after}’입니다.`,
+    `‘정상 작업 실행’을 눌러 ‘${item.normal}’도 확인하세요.`
+  ];
+  element('steps').replaceChildren(...steps.map(text => {
+    const step = document.createElement('li');
+    step.textContent = text;
+    return step;
+  }));
+  showResult();
+}
+
+function showResult() {
+  const result = element('result');
+  result.replaceChildren();
+  const { before, after, normal } = server.states.get(target.value);
+  for (const [label, text] of [['조치 전', before], ['조치 후', after], ['정상 작업', normal]]) {
+    if (!text) continue;
+    const row = document.createElement('p');
+    const heading = document.createElement('strong');
+    heading.textContent = label;
+    row.append(heading, ' ', text);
+    result.append(row);
+  }
+  result.hidden = !result.childElementCount;
 }
 
 element('create').addEventListener('click', () => {
   if (!selected.size) return;
-  if (server && !window.confirm('새 서버를 만들면 현재 서버의 설정과 터미널 기록이 초기화됩니다. 새 서버를 만들까요?')) return;
+  if (server && !window.confirm('새 서버를 만들면 현재 서버의 설정과 점검 결과이 초기화됩니다. 새 서버를 만들까요?')) return;
   const items = scenarios.filter(item => selected.has(item));
   serverNumber += 1;
   server = {
     name: `linux-sim-${serverNumber}`,
     states: new Map(items.map(item => [item.title, { item, strong: false, verified: false }]))
   };
-  element('title').textContent = server.name;
-  element('terminal-name').textContent = `lab@${server.name}`;
+  element('audit-result').hidden = true;
   element('server-controls').hidden = false;
-  element('hint').textContent = '전체 점검으로 서버 상태를 확인하고, 실습 항목을 골라 설정을 바꿔보세요.';
+  element('hint').textContent = `${server.name} · 실습 항목 ${items.length}개`;
   target.replaceChildren(...items.map(item => new Option(item.title, item.title)));
   target.value = items[0].title;
-  output.replaceChildren();
-  log(prompt('가상 서버 생성'), [`취약점 ${items.length}개 적용`],
-    ...items.map(item => [`  • ${item.title} · ${item.weak}`]));
   openTarget();
   updateSelection();
   updateProgress();
@@ -116,44 +127,55 @@ setting.addEventListener('change', () => {
   const state = server.states.get(target.value);
   state.strong = setting.value === 'strong';
   state.verified = false;
-  log([''], prompt(`가상 설정 적용 · ${state.item.title}`), [setting.selectedOptions[0].text]);
+  state.normal = undefined;
+  element('audit-result').hidden = true;
+  showResult();
   updateProgress();
 });
 
-function audit(states) {
-  for (const state of states) {
-    const { item, strong } = state;
-    state.verified = strong;
-    log([`${strong ? '양호' : '미흡'} · ${item.title}`, strong ? 'pass' : 'fail'],
-      [strong ? item.after : item.before]);
-    if (strong) log([`정상 동작  ${item.normal}`]);
-  }
-  updateProgress();
+function audit(state) {
+  if (state.strong) state.after = state.item.after;
+  else state.before = state.item.before;
+  state.verified = state.strong;
 }
 
 element('run').addEventListener('click', () => {
+  audit(server.states.get(target.value));
+  showResult();
+  updateProgress();
+});
+
+element('normal').addEventListener('click', () => {
   const state = server.states.get(target.value);
-  log([''], prompt(state.item.action));
-  audit([state]);
+  state.normal = state.item.normal;
+  showResult();
 });
 
 element('audit').addEventListener('click', () => {
-  log([''], prompt('전체 점검'));
-  audit(server.states.values());
+  const states = [...server.states.values()];
+  states.forEach(audit);
+  const result = element('audit-result');
+  result.replaceChildren(...states.map(state => {
+    const row = document.createElement('p');
+    row.textContent = `${state.strong ? '양호' : '미흡'} · ${state.item.title}`;
+    row.className = state.strong ? 'pass' : 'fail';
+    return row;
+  }));
+  result.hidden = false;
+  showResult();
+  updateProgress();
 });
 
 element('reset').addEventListener('click', () => {
-  const state = server.states.get(target.value);
-  state.strong = false;
-  state.verified = false;
+  const { item } = server.states.get(target.value);
+  server.states.set(item.title, { item, strong: false, verified: false });
+  element('audit-result').hidden = true;
   openTarget();
-  log([''], prompt(`설정 초기화 · ${state.item.title}`), [state.item.weak]);
   updateProgress();
 });
 
 element('search').addEventListener('input', renderNavigation);
 element('title').textContent = '가상 서버 만들기';
-log(['실습할 취약점을 체크한 뒤 가상 서버를 만들어 주세요.']);
 renderNavigation();
 updateSelection();
 updateProgress();

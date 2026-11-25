@@ -9,17 +9,44 @@
 <aside><h2>점검 항목</h2><label class="visually-hidden" for="search">항목 검색</label><input id="search" type="search" placeholder="점검 항목 검색"><fieldset id="topics"><legend class="visually-hidden">서버에 포함할 취약점</legend></fieldset><div class="builder"><span id="selection" role="status"></span><button id="create" class="primary" disabled>가상 서버 만들기</button></div></aside>
 <section aria-labelledby="title">
 <p id="category" class="category"></p><h1 id="title"></h1><p id="risk" class="risk"></p>
-<div class="terminal">
-<div class="bar"><span class="dot"></span><strong id="terminal-name">lab@linux-sim</strong><span class="simulation">가상 서버</span></div>
-<div id="output" role="log" aria-label="가상 터미널 출력" tabindex="0"></div>
-<div class="controls" id="server-controls" hidden>
+<p id="hint" class="hint">왼쪽에서 실습할 항목을 선택하고 가상 서버를 만들어 주세요.</p>
+<div id="server-controls" class="practice" hidden>
+<div class="controls">
 <label for="target">실습 항목 <select id="target"></select></label>
 <label for="setting">설정값 <select id="setting"></select></label>
-<button id="run" class="primary">점검 실행</button><button id="audit">전체 점검</button><button id="reset">항목 설정 초기화</button>
-</div></div>
-<p id="hint" class="hint"></p>
+</div>
+<div class="practice-body">
+<h2>모의해킹 실습 절차</h2>
+<ol id="steps"></ol>
+<div class="actions">
+<button id="run" class="primary">점검 실행</button><button id="normal">정상 작업 실행</button><button id="audit">전체 점검</button><button id="reset">항목 설정 초기화</button>
+</div>
+<div id="result" class="result" role="status"></div>
+<div id="audit-result" class="result" role="status" hidden></div>
+</div>
+</div>
+<details id="real-lab">
+<summary>실제 리눅스 셸 · 로컬 Docker</summary>
+<p class="hint">umask를 직접 확인하려면 컨테이너를 시작한 뒤 실습용 파일 두 개를 만들어 권한을 비교하세요.</p>
+<pre class="shell-example"><code>umask 0022
+touch before.txt
+ls -l before.txt
+umask 0027
+touch after.txt
+ls -l before.txt after.txt</code></pre>
+<p class="hint">새 파일의 권한은 각각 0644와 0640입니다. 기존 파일의 권한은 그대로입니다. 반복 실습에는 새 파일명을 사용하세요.</p>
+<div class="terminal">
+<div id="real-output" role="log" aria-label="리눅스 명령 출력" tabindex="0"></div>
+<form id="real-form" class="controls">
+<button type="button" id="real-start" class="primary">리눅스 컨테이너 시작</button>
+<label for="real-command">명령어</label><input id="real-command" disabled autocomplete="off" placeholder="ls -la">
+<button id="real-run" disabled>실행</button>
+</form>
+</div>
+</details>
 </section>
 </main>
 <script src="scenarios.js" defer></script>
 <script src="app.js" defer></script>
+<script src="shell.js" defer></script>
 </html>
