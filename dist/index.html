@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리눅스 보안 실습실</title>
+<link rel="stylesheet" href="style.css">
+<header><div class="brand"><b aria-hidden="true">&gt;_</b><div><strong>리눅스 보안 실습실</strong><small>시스템 하드닝</small></div></div><div class="progress"><span id="progress"></span><progress id="meter" max="20" value="0"></progress></div></header>
+<main>
+<aside><h2>점검 항목</h2><label class="visually-hidden" for="search">항목 검색</label><input id="search" type="search" placeholder="점검 항목 검색"><nav id="topics" aria-label="점검 항목"></nav></aside>
+<section aria-labelledby="title">
+<p id="category" class="category"></p><h1 id="title"></h1><p id="risk" class="risk"></p>
+<div class="terminal">
+<div class="bar"><span class="dot"></span><strong>lab@linux-sim</strong><span class="simulation">가상 서버</span></div>
+<div id="output" role="log" aria-label="가상 터미널 출력" tabindex="0"></div>
+<div class="controls">
+<label for="setting">설정값 <select id="setting"></select></label>
+<button id="run" class="primary">점검 실행</button><button id="reset">초기화</button>
+</div></div>
+<p id="hint" class="hint"></p>
+</section>
+</main>
+<script src="scenarios.js" defer></script>
+<script src="app.js" defer></script>
+</html>
